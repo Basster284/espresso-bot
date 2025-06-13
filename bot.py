@@ -15,9 +15,6 @@ with open("token.json") as f:
 
 bot = telebot.TeleBot(json_token)
 
-def send_start_message():
-	bot.send_message(2100626507, "Бот онлайн")
-
 @bot.message_handler(commands=["support"])
 def support(message):
 	question = ' '.join(message.text.split()[1:])
@@ -325,7 +322,5 @@ def translate(message):
 	translator = Translator()
 	texttotranslate = ' '.join(message.text.split()[1:])
 	bot.send_message(message.chat.id, f"Перевод: \n{translator.translate(texttotranslate,dest='ru').text}")
-	
-send_start_message()
 
 bot.infinity_polling()
