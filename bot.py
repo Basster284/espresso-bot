@@ -20,7 +20,7 @@ def support(message):
 	question = ' '.join(message.text.split()[1:])
 	try:
 		if message.text.split()[1] != None:
-			bot.send_message(2100626507, f"Пользователь [{message.from_user.username}](tg://user?id={message.from_user.id}) \\(id\\={message.from_user.id}\\) спросил: \n{question}", parse_mode="MarkdownV2")
+			bot.send_message(ID, f"Пользователь [{message.from_user.username}](tg://user?id={message.from_user.id}) \\(id\\={message.from_user.id}\\) спросил: \n{question}", parse_mode="MarkdownV2")
 			bot.send_message(message.chat.id, "Вопрос отправлен, ждите ответ.")
 	except Exception as e:
 		bot.send_message(message.chat.id, "Использование команды: \n/support <вопрос>")
