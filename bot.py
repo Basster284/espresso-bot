@@ -1,8 +1,9 @@
-import telebot
 import json
+import telebot
 import os
 import datetime
 import requests
+import asyncio
 import base64
 import pyjokes
 from googletrans import Translator
@@ -20,15 +21,10 @@ def support(message):
 	question = ' '.join(message.text.split()[1:])
 	try:
 		if message.text.split()[1] != None:
-			bot.send_message(ID, f"Пользователь [{message.from_user.username}](tg://user?id={message.from_user.id}) \\(id\\={message.from_user.id}\\) спросил: \n{question}", parse_mode="MarkdownV2")
+			bot.send_message(-1002778968248, f"Пользователь [{message.from_user.username}](tg://user?id={message.from_user.id}) \\(id\\={message.from_user.id}\\) спросил: \n{question}", parse_mode="MarkdownV2")
 			bot.send_message(message.chat.id, "Вопрос отправлен, ждите ответ.")
 	except Exception as e:
 		bot.send_message(message.chat.id, "Использование команды: \n/support <вопрос>")
-
-	
-@bot.message_handler(commands=["getid"])
-def getid(message):
-	bot.send_message(message.chat.id, f"{message.chat.id}")
 	
 @bot.message_handler(commands=["respond"])
 def respond(message):
@@ -61,7 +57,7 @@ def compilerust(message):
 		try:
 			response = requests.post(url_rust,data=json.dumps(payload),headers=headers)
 			result = response.json()
-			bot.send_message(message.chat.id, f"Вывод: \n{result.get('stdout','')}")
+			bot.send_message(message.chat.id, f"Вывод: \n{result.get('stdout','')}\nStackrace: \n{result.get('stderr','')}")
 			
 		except Exception as e:
 			print(f"{e}")
@@ -114,6 +110,8 @@ def unmute(message):
 		user_id = message.reply_to_message.from_user.id
 		bot.restrict_chat_member(message.chat.id, user_id, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
 		bot.send_message(message.chat.id, f"Пользователь @{message.reply_to_message.from_user.username} ушёл из таймаута")
+	else:
+		bot.send_message(message.chat.id, "Недостаточно прав.")
 	
 @bot.message_handler(commands=["ban","b"])
 def ban(message):
@@ -168,16 +166,6 @@ def warn(message):
 	else:
 		bot.send_message(message.chat.id, "Недостаточно прав.")
 	
-@bot.message_handler(commands=["restart","rs"])
-def restart(message):
-	if message.chat.id != 2100626507:
-		return
-	else:
-		bot.send_message(message.chat.id,"Перезапуск")
-	bot.stop_polling()
-	print("бот остановлен")
-	quit(os.system("python bot.py"))
-	
 @bot.message_handler(commands=["help","h"])
 def help(message):
 	bot.send_message(message.chat.id, "*Помощь по боту* \n_/mute_ \\<время мута\\> \\- мутит пользователя на заданное время в минутах \n_/unmute_ \\- выводит пользователя из мута \n_/ban_ \\- банит пользователя \n_/unban_ \\- разбанивает пользователя \n_/bam_ \\- БАМит пользователя \n_/warn_ \\- выдаёт предупреждение пользователю \n_/kick_ \\- выгнать пользователя \n_/slbi_ \\<id уровня\\> \\- Ищет уровень по ID в Geometry Dash \n_/translate_ \\<текст\\> \\- Переводит введённый текст на русский язык \n_/base64encode_ \\<строка\\> \\- Энкодирует строку в Base64 \n_/base64decode_ \\<строка\\> \\- Декодирует Base64 \n_/enrandomjoke_ \\- Выводит случайную шутку на английском \n_/writerules_ \\- перезаписывает правила чата \n_/readrules_ \\- показывает правила чата \n_/compilerust_ \\<код на rust\\> \\- компилирует введённый код на Rust", parse_mode="MarkdownV2")
@@ -199,9 +187,10 @@ def kiss(message):
 @bot.message_handler(commands=["kill"])
 def kill(message):
 	try:
-		bot.send_message(message.chat.id, f"@{message.from_user.username} убил @{message.reply_to_message.from_user.username}")
-	except:
+		bot.send_message(message.chat.id, f"@{message.from_user.username}] убил @{message.reply_to_message.from_user.username}")
+	except Exception as e:
 		bot.send_message(message.chat.id, "Вы должны ответить на сообщение командой!")
+		print(e)
 	
 @bot.message_handler(commands=["bam"])
 def bam(message):
@@ -209,7 +198,7 @@ def bam(message):
 	user_status = bot.get_chat_member(message.chat.id, user_sender_id).status
 	if user_status == "administrator" or user_status == "creator":
 		user_id = message.reply_to_message.from_user.id
-		bot.send_message(message.chat.id, f"Пользователь @{message.reply_to_message.from_user.username} заБАМен.")
+		bot.send_message(message.chat.id, f"Пользователь [{message.reply_to_message.from_user.username}](tg://user?id={message.reply_to_message.from_user.id}) заБАМен\\.", parse_mode="MarkdownV2")
 	else:
 		bot.send_message(message.chat.id, "Недостаточно прав.")
 		
@@ -230,14 +219,6 @@ def writerules(message):
 			bot.send_message(message.chat.id, "Правила обновлены.")
 	else:
 		bot.send_message(message.chat.id, "Недостаточно прав.")
-		
-@bot.message_handler(commands=["shutdown","shd"])
-def shutdown(message):
-	if message.chat.id != 2100626507:
-		return
-	else:
-		bot.send_message(message.chat.id, "Выключение")
-		bot.stop_polling()
 
 @bot.message_handler(commands=["searchlevelbyid","slbi"])
 def searchlevelbyid(message):
@@ -302,13 +283,13 @@ def searchlevelbyid(message):
 				thumbnail = f"https://levelthumbs.prevter.me/thumbnail/{level_id}"
 				rthumb = requests.get(thumbnail)
 				if rthumb.status_code == 404:
-					bot.send_message(message.chat.id,f"{level_name} \n#️⃣ID: {level_id}\n⚪Сложность: {difficulty}\n📲Загрузки: {downloads}\n👍Лайки: {likes}\n🔊Песня: {song_name}(http://www.newgrounds.com/audio/listen/{song_id})")
+					bot.send_message(message.chat.id,f"*{level_name}* \nID\\: `{level_id}`\nСложность\\: {difficulty}\nЗагрузки\\: {downloads}\nЛайки\\: {likes}\nПесня\\: [{song_name}](http://www.newgrounds.com/audio/listen/{song_id})", parse_mode="MarkdownV2")
 				else:
-					bot.send_photo(message.chat.id, photo=thumbnail, caption=f"{level_name} \n#️⃣ID: {level_id}\n⚪Сложность: {difficulty}\n📲Загрузки: {downloads}\n👍Лайки: {likes}\n🔊Песня: {song_name}(http://www.newgrounds.com/audio/listen/{song_id})")
+					bot.send_photo(message.chat.id, photo=thumbnail, caption=f"*{level_name}* \nID\\: `{level_id}`\nСложность\\: {difficulty}\nЗагрузки\\: {downloads}\nЛайки\\: {likes}\nПесня\\: [{song_name}](http://www.newgrounds.com/audio/listen/{song_id})", parse_mode="MarkdownV2")
 			else:
 				bot.send_message(message.chat.id, "Ничего не найдено.")
 		except requests.exceptions.RequestException as e:
-			bot.send_message(message.chat.id,f"Ошибка при запросе: {e}")
+			print(f"Ошибка при запросе: {e}")
 	else:
 		bot.send_message(message.chat.id, "Использование команды: \n/slbi <id уровня>")
 		
@@ -322,5 +303,5 @@ def translate(message):
 	translator = Translator()
 	texttotranslate = ' '.join(message.text.split()[1:])
 	bot.send_message(message.chat.id, f"Перевод: \n{translator.translate(texttotranslate,dest='ru').text}")
-
+	
 bot.infinity_polling()
