@@ -36,7 +36,7 @@ stcur = stories.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS collabs(chatid INTEGER PRIMARY KEY, name TEXT NOT NULL, song NOT NULL, players TEXT)")
 conn.commit()
-balcur.execute("CREATE TABLE IF NOT EXISTS coins(userid INTEGER PRIMARY KEY, coins INT NOT NULL)")
+balcur.execute("CREATE TABLE IF NOT EXISTS coins(userid INTEGER PRIMARY KEY, coins INTEGER NOT NULL, abletowork INTEGER DEFAULT 1)")
 balances.commit()
 admcur.execute("CREATE TABLE IF NOT EXISTS admins(chatid INTEGER NOT NULL, userid INTEGER PRIMARY KEY, level INT NOT NULL)")
 admins.commit()
@@ -443,12 +443,31 @@ async def rule34(message):
 		
 @bot.message_handler(commands=["work"])
 async def work(message: types.Message):
-	user_id = message.from_user.id
-	print(user_id)
-	gems = random.randint(30,99)
-	balcur.execute("INSERT INTO coins (userid, coins) VALUES (?,?) ON CONFLICT (userid) DO UPDATE SET coins = coins + ?",(user_id, gems, gems))
-	balances.commit()
-	await bot.send_message(message.chat.id, f"Вы заработали {gems} кофекоинов")
+	try:
+		balcur.execute("SELECT abletowork FROM coins WHERE userid = ?", (message.from_user.id,))
+		abletowork = balcur.fetchone()
+		abletowork =abletowork[0]
+		if abletowork == 1:
+			user_id = message.from_user.id
+			gems = random.randint(30,99)
+			balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET coins = coins + ?",(user_id, gems, 0, gems))
+			balances.commit()
+			await bot.send_message(message.chat.id, f"Вы заработали {gems} кофекоинов")
+			await asyncio.sleep(3600)
+			balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET abletowork = 1",(user_id, gems, 1))
+			balances.commit()
+		elif abletowork == 0:
+			await bot.send_message(message.chat.id, "Отдохните, ёмаё")
+	except:
+		gems = random.randint(30,99)
+		user_id = message.from_user.id
+		balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET coins = coins + ?",(user_id, gems, 0, gems))
+		balances.commit()
+		await bot.send_message(message.chat.id, f"Вы заработали {gems} кофекоинов")
+		await asyncio.sleep(3600)
+		balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET abletowork = 1",(user_id, gems, 1))
+		balances.commit()
+	
 		
 @bot.message_handler(commands=["balance"])
 async def balance(message: types.Message):
@@ -461,6 +480,33 @@ async def balance(message: types.Message):
 	except Exception as e:
 		print(e)
 		await bot.send_message(message.chat.id, "У вас 0 кофекоинов")
+		
+@bot.message_handler(commands=["casino"])
+async def kazik(message: types.Message):
+	print(message.text.split()[1])
+	to_dep = int(message.text.split()[1])
+	if to_dep == None: await bot.send_message(message.chat.id, "Использование команды:\n/casino <сумма денег>ьл")
+	userid=message.from_user.id
+	balcur.execute("SELECT abletowork FROM coins WHERE userid=?",(userid,))
+	abletowork = balcur.fetchone()
+	abletowork = abletowork[0]
+	print(abletowork)
+	balcur.execute("SELECT coins FROM coins WHERE userid=?",(userid,))
+	bal = balcur.fetchone()
+	bal = bal[0]
+	print(bal)
+	if bal == 0 or to_dep > bal:
+		await bot.send_message(message.chat.id, "У вас недостаточно денег!")
+	else:
+		isdouble = random.randint(0,1)
+		if isdouble == 0:
+			balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET coins = coins - ?",(userid, bal - to_dep, abletowork, to_dep))
+			balances.commit()
+			await bot.send_message(message.chat.id, "Вы проиграли!")
+		else:
+			balcur.execute("INSERT INTO coins (userid, coins, abletowork) VALUES (?,?,?) ON CONFLICT (userid) DO UPDATE SET coins = coins + ?",(userid,bal + to_dep, abletowork, to_dep))
+			balances.commit()
+			await bot.send_message(message.chat.id, "Вы выиграли!")
 		
 @bot.message_handler(commands=["nahuiirisa"])
 async def nahuiirisa(message):
@@ -478,6 +524,9 @@ async def respondai(message: types.Message):
 	
 	if prompt == "что с ботом":
 		await bot.send_message(message.chat.id, "да всё ок вроде")
+		
+	if message.from_user.is_bot == True:
+		await bot.send_message(message.chat.id, "иди нахуй")
 	"""
 	await bot.send_chat_action(message.chat.id, 'typing')
 	
